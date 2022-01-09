@@ -30,7 +30,7 @@ async function startApolloServer() {
   await new Promise<void>((resolve) =>
     httpServer.listen({ port: PORT }, resolve)
   );
-  log.info("listening on port " + PORT);
+  log.info("server listening on port " + PORT);
 }
 
 startApolloServer();

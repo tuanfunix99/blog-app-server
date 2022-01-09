@@ -1,0 +1,9 @@
+type Query{
+    hi: String,
+}
+
+type Post{
+    _id: ID!,
+    title: String!,
+    content: String!,
+}

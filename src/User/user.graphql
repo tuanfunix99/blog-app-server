@@ -1,0 +1,28 @@
+type Query {
+  user: User,
+}
+
+type Mutation {
+  register(input: registerInput): Boolean!
+  activeAccount(input: String): Boolean!
+  login(input: loginInput): String!
+  logout: Boolean!
+}
+
+input registerInput {
+  username: String!
+  email: String!
+  password: String!
+}
+
+input loginInput {
+  email: String!
+  password: String!
+}
+
+type User {
+  _id: ID!
+  username: String!
+  email: String!
+  profilePic: String
+}

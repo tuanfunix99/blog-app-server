@@ -8,12 +8,24 @@ import { Error } from "mongoose";
 import jwt from "jsonwebtoken";
 import { config } from "dotenv";
 import auth from "../middleware/auth";
+import cloudinary from "cloudinary";
+import { v4 as uuidv4 } from "uuid";
+import { subscribe } from "graphql";
+import { PubSub } from "graphql-subscriptions";
+import validator from "validator";
 
 config();
 
 interface Errors {
   [c: string]: any;
 }
+
+interface CloudData {
+  url: string;
+  public_id: string;
+}
+
+const pubsub = new PubSub();
 
 const Query = {
   async user(parent: any, args: any, context: any) {
@@ -162,6 +174,127 @@ const Mutation = {
       throw new AuthenticationError("Not Authenticate");
     }
   },
+
+  async uploadProfilePic(parent: any, args: any, context: any) {
+    try {
+      const { req, res } = context;
+      await auth(req, res);
+      const user = await User.findById(res.locals.user._id);
+      let cloud_data: CloudData = {
+        url: "",
+        public_id: "",
+      };
+      await destroyCloudinary(args.input.public_id);
+      const result = await (<any>uploadToCloudinary(args.input.image));
+      user.profilePic = result.url;
+      cloud_data.url = result.url;
+      cloud_data.public_id = result.public_id;
+      pubsub.publish("UPLOADED_PROFILEPIC", {
+        uplodedProfilePic: {
+          user_id: user._id,
+          image: user.profilePic,
+        },
+      });
+      await user.save();
+      return cloud_data;
+    } catch (error) {
+      throw new AuthenticationError("Not Authenticate");
+    }
+  },
+
+  async updateInfo(parent: any, args: any, context: any) {
+    try {
+      const { req, res } = context;
+      await auth(req, res);
+      const user = await User.findById(res.locals.user._id);
+      const { username, email } = args.input;
+      if (validator.isEmpty(username) || validator.isEmpty(email)) {
+        throw new Error("Value is required");
+      }
+      if (!validator.isEmail(email)) {
+        throw new Error("Email not valid");
+      }
+      user.username = username;
+      user.email = email;
+      await user.save();
+      return user;
+    } catch (error) {
+      log.error(error.message, "Error updating info");
+      throw new AuthenticationError("Not Authenticate");
+    }
+  },
+
+  async updatePassword(parent: any, args: any, context: any) {
+    let errors: Errors = {};
+    let error = new Error.ValidationError();
+    try {
+      const { req, res } = context;
+      await auth(req, res);
+      const user = await User.findById(res.locals.user._id);
+      const { password, newPassword } = args.input;
+      const isMatchPassword = await compare(password, user.password);
+      if (!isMatchPassword) {
+        error.errors.password = new Error.ValidatorError({
+          message: "Password not match",
+          path: "password",
+        });
+        throw error;
+      }
+      if (newPassword.length < 8 || newPassword.length > 64) {
+        error.errors.newPassword = new Error.ValidatorError({
+          message: "Password at least 8 chracters and max 64 characters",
+          path: "newPassword",
+        });
+        throw error;
+      }
+      user.password = await hash(newPassword, 8);
+      await user.save();
+      return true;
+    } catch (error) {
+      if (error.name === "ValidationError") {
+        for (const property in error.errors) {
+          if (error.errors[property].kind === "unique") {
+            continue;
+          }
+          errors[property] = error.errors[property].message;
+        }
+      }
+      log.error(errors, "Active Account");
+      throw new UserInputError("Bad Input", { errors });
+    }
+  },
 };
 
-export default { Query, Mutation };
+const Subscription = {
+  uplodedProfilePic: {
+    subscribe: () => pubsub.asyncIterator(["UPLOADED_PROFILEPIC"]),
+  },
+};
+
+const uploadToCloudinary = (image: any) => {
+  return new Promise(function (resolve, reject) {
+    cloudinary.v2.uploader.upload(
+      image,
+      { public_id: `${Date.now()}-${uuidv4()}` },
+      async function (error, result) {
+        if (error) {
+          return reject(error);
+        }
+        return resolve(result);
+      }
+    );
+  });
+};
+
+const destroyCloudinary = (public_id: string) => {
+  return new Promise(function (resolve, reject) {
+    cloudinary.v2.uploader.destroy(public_id, function (error, result) {
+      if (error) {
+        return reject(error);
+      }
+      return resolve(result);
+    });
+  });
+};
+
+export default { Query, Mutation, Subscription };

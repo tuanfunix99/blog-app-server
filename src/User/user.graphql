@@ -1,5 +1,6 @@
+
 type Query {
-  user: User,
+  user: User
 }
 
 type Mutation {
@@ -7,6 +8,39 @@ type Mutation {
   activeAccount(input: String): Boolean!
   login(input: loginInput): String!
   logout: Boolean!
+  uploadProfilePic(input: uploadProfilePicInput): Cloudinary!
+  updateInfo(input: updateInfoInput): User
+  updatePassword(input: updatePasswordInput): Boolean
+}
+
+type Subscription {
+  uplodedProfilePic: UploadedProfilePic
+}
+
+type Cloudinary{
+  url: String,
+  public_id: String
+}
+
+type UploadedProfilePic{
+  user_id: String,
+  image: String,
+}
+
+input updateInfoInput{
+  username: String,
+  email: String,
+}
+
+input updatePasswordInput{
+  password: String,
+  newPassword: String,
+}
+
+
+input uploadProfilePicInput{
+  image: String,
+  public_id: String
 }
 
 input registerInput {

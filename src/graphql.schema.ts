@@ -8,7 +8,7 @@ const resolversArray = loadFilesSync(join(process.cwd(), 'src/**/*.resolver.*'))
 
 const graphqlSchema = makeExecutableSchema({
     typeDefs: mergeTypeDefs(typesArray),
-    resolvers: mergeResolvers(resolversArray),
+    resolvers: mergeResolvers(resolversArray)
 })
 
 export default graphqlSchema;

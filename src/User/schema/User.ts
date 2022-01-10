@@ -37,7 +37,7 @@ const UserSchema = new Schema(
         }
       },
     },
-    profilePic: { type: String, default: "" },
+    profilePic: { type: String, default: "/default-profile.png" },
     isActive: {
       type: Boolean,
       default: false,

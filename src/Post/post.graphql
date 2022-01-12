@@ -3,10 +3,12 @@ scalar JSon
 type Query {
   post(input: ID!): Post
   posts: [Post]
+  myPost(input: ID!): [Post]
 }
 
 type Mutation {
   createPost(input: createPostInput): ID!
+  deletePost(input: ID!): Boolean
 }
 
 type Post {

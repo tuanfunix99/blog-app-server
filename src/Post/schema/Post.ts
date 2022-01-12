@@ -7,14 +7,14 @@ const PostSchema = new Schema(
       required: true,
     },
     content: {
-      type: String,
+      type: Object,
       required: true,
     },
     backgroundPic: {
       type: String,
-      default: "",
+      default: "/background.jpg",
     },
-    craetedBy: {
+    createdBy: {
       type: Schema.Types.ObjectId,
       ref: "User",
     },

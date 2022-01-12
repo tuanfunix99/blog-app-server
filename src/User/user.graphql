@@ -1,4 +1,6 @@
 
+scalar JSon
+
 type Query {
   user: User
 }
@@ -37,10 +39,9 @@ input updatePasswordInput{
   newPassword: String,
 }
 
-
 input uploadProfilePicInput{
+  public_id: String,
   image: String,
-  public_id: String
 }
 
 input registerInput {

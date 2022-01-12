@@ -1,6 +1,6 @@
 import { Schema, model } from "mongoose";
-import { IUser } from '../interfaces/user.interface';
-import validator from 'validator';
+import { IUser } from "../interfaces/user.interface";
+import validator from "validator";
 
 const UserSchema = new Schema(
   {
@@ -9,31 +9,33 @@ const UserSchema = new Schema(
       required: [true, "Username is required"],
       unique: true,
       trim: true,
-      validate(value: any){
-        if(value.includes(" ")){
+      validate(value: any) {
+        if (value.includes(" ")) {
           throw new Error("Username must not contain character space");
         }
-      }
+      },
     },
     email: {
       type: String,
       required: [true, "Email is required"],
       unique: true,
       trim: true,
-      validate(value: any){
-        if(!validator.isEmail(value)){
+      validate(value: any) {
+        if (!validator.isEmail(value)) {
           throw new Error("Email not valid");
         }
-      }
+      },
     },
     password: {
       type: String,
       trim: true,
       required: [true, "Password is required"],
-      validate(value: any){
+      validate(value: any) {
         const valueCharacters = value.trim().length;
-        if(valueCharacters < 8 || valueCharacters > 64){
-          throw new Error("Password at least 8 chracters and max 64 characters");
+        if (valueCharacters < 8 || valueCharacters > 64) {
+          throw new Error(
+            "Password at least 8 chracters and max 64 characters"
+          );
         }
       },
     },
@@ -44,6 +46,7 @@ const UserSchema = new Schema(
     },
     code: { type: String, default: "" },
     token: { type: String },
+    isAdmin: { type: Boolean, default: false },
   },
   {
     timestamps: true,

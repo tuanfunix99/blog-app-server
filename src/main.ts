@@ -10,6 +10,7 @@ import cors from "cors";
 import cloudinary from "cloudinary";
 import bodyParser from "body-parser";
 import "./utils/mongodb";
+import { createPost, post } from './controllers/post';
 
 config();
 
@@ -26,6 +27,9 @@ async function startApolloServer() {
   const httpServer = createServer(app);
   app.use(cors());
   app.use(bodyParser.json({ limit: "5mb" }));
+
+  app.post("/api/post", createPost);
+  app.get("/api/post/:id", post);
 
   const subscriptionServer = SubscriptionServer.create(
     { schema: graphqlSchema, execute, subscribe },

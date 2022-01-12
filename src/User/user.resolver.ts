@@ -13,6 +13,7 @@ import { v4 as uuidv4 } from "uuid";
 import { subscribe } from "graphql";
 import { PubSub } from "graphql-subscriptions";
 import validator from "validator";
+import GraphQLJSON from "graphql-type-json";
 
 config();
 
@@ -26,6 +27,8 @@ interface CloudData {
 }
 
 const pubsub = new PubSub();
+
+const JSon = GraphQLJSON;
 
 const Query = {
   async user(parent: any, args: any, context: any) {
@@ -297,4 +300,4 @@ const destroyCloudinary = (public_id: string) => {
   });
 };
 
-export default { Query, Mutation, Subscription };
+export default { Query, Mutation, Subscription, JSon };

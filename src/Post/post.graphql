@@ -1,9 +1,40 @@
-type Query{
-    hi: String,
+scalar JSon
+
+type Query {
+  post(input: ID!): Post
+  posts: [Post]
 }
 
-type Post{
-    _id: ID!,
-    title: String!,
-    content: String!,
+type Mutation {
+  createPost(input: createPostInput): ID!
+}
+
+type Post {
+  _id: ID!
+  title: String!
+  content: JSon
+  backgroundPic: String!
+  createdAt: String!
+  categories: [Category]
+  createdBy: User
+}
+
+input createPostInput {
+  title: String!
+  content: JSon!
+  backgroundPic: String!
+  categories: [ID]!
+  userId: ID!
+}
+
+type Category {
+  _id: ID!
+  name: String
+}
+
+type User {
+  _id: ID!
+  username: String!
+  email: String!
+  profilePic: String
 }

@@ -10,7 +10,6 @@ import cors from "cors";
 import cloudinary from "cloudinary";
 import bodyParser from "body-parser";
 import "./utils/mongodb";
-import { createPost, post } from "./controllers/post";
 import multer from "multer";
 import { v4 as uuidv4 } from "uuid";
 
@@ -62,7 +61,8 @@ async function startApolloServer() {
 
   app.post("/api/upload-file", async (req, res) => {
     try {
-      const encoded = "data:image/png;base64," + req.file.buffer.toString("base64");
+      let encoded = "";
+      encoded = "data:image/png;base64," + req.file.buffer.toString("base64");
       const result = await (<any>uploadToCloudinary(encoded));
       res.status(200).send(result.url);
     } catch (error) {
@@ -72,7 +72,7 @@ async function startApolloServer() {
 
   app.post("/api/fetch-url", (req, res) => {
     try {
-      if(!req.body.url){
+      if (!req.body.url) {
         throw new Error("Url not found");
       }
       res.status(200).send(req.body.url);

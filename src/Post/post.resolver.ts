@@ -11,7 +11,7 @@ const Query = {
   async post(parent: any, args: any) {
     const { input } = args;
     try {
-      const post = await Post.findOne({ _id: input });
+      const post = await Post.findOne({ _id: input }).populate("categories");
       post.content = JSON.stringify(post.content);
       return post;
     } catch (error) {
@@ -24,6 +24,24 @@ const Query = {
       let posts = await Post.find(
         {},
         "title backgroundPic createdAt categories"
+      )
+        .sort({ createdAt: -1 })
+        .populate("categories", "name")
+        .populate("createdBy", "username profilePic");
+      return posts;
+    } catch (error) {
+      log.error(error.message, "Error get posts");
+      throw new Error("Not found");
+    }
+  },
+  async postsPage(parent: any, args: any) {
+    const { input } = args;
+    const start = (input - 1) * input;  
+    try {
+      let posts = await Post.find(
+        {},
+        "title backgroundPic createdAt categories",
+        { skip: start, limit: 4 }
       )
         .sort({ createdAt: -1 })
         .populate("categories", "name")
@@ -90,13 +108,30 @@ const Mutation = {
     const { input } = args;
     try {
       await auth(req, res);
-      const post = await Post.findOne({ _id: input }, "createdBy");
-      if(!post) {
+      const post = await Post.findOne({ _id: input }, "createdBy content backgroundPic");
+      if (!post) {
         throw new Error("Post not found");
       }
-      if(post.createdBy.toString() !== res.locals.user._id.toString()) {
+      if (post.createdBy.toString() !== res.locals.user._id.toString()) {
         throw new Error("User not allowed");
       }
+      if(post.backgroundPic !== "/background.jpg"){
+        const arr = post.backgroundPic.split("/");
+        const public_id = arr[arr.length - 1].split(".")[0];
+        destroyCloudinary(public_id);
+      }
+      post.content.blocks.map((block: any) => {
+        if (
+          block.type === "image" &&
+          block.data.file.url.includes(
+            "http://res.cloudinary.com/dqvbasiry/image/upload/"
+          )
+        ) {
+          const arr = block.data.file.url.split("/");
+          const public_id = arr[arr.length - 1].split(".")[0];
+          destroyCloudinary(public_id);
+        }
+      });
       await Post.findOneAndRemove({ _id: input });
       return true;
     } catch (error) {
@@ -118,6 +153,17 @@ const uploadToCloudinary = (image: any) => {
         return resolve(result);
       }
     );
+  });
+};
+
+const destroyCloudinary = (public_id: string) => {
+  return new Promise(function (resolve, reject) {
+    cloudinary.v2.uploader.destroy(public_id, function (error, result) {
+      if (error) {
+        return reject(error);
+      }
+      return resolve(result);
+    });
   });
 };
 

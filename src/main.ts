@@ -10,7 +10,9 @@ import cors from "cors";
 import cloudinary from "cloudinary";
 import bodyParser from "body-parser";
 import "./utils/mongodb";
-import { createPost, post } from './controllers/post';
+import { createPost, post } from "./controllers/post";
+import multer from "multer";
+import { v4 as uuidv4 } from "uuid";
 
 config();
 
@@ -22,14 +24,62 @@ cloudinary.v2.config({
 
 const PORT = process.env.PORT || 9000;
 
+const fileFilter = (req: any, file: any, callback: any) => {
+  if (
+    file.mimetype === "image/png" ||
+    file.mimetype === "image/jpg" ||
+    file.mimetype === "image/jpeg" ||
+    file.mimeType === "image/gif"
+  ) {
+    callback(null, true);
+  } else {
+    callback(null, false);
+  }
+};
+
+const uploadToCloudinary = (image: any) => {
+  return new Promise(function (resolve, reject) {
+    cloudinary.v2.uploader.upload(
+      image,
+      { public_id: `${Date.now()}-${uuidv4()}` },
+      async function (error, result) {
+        if (error) {
+          return reject(error);
+        }
+        return resolve(result);
+      }
+    );
+  });
+};
+
 async function startApolloServer() {
   const app = express();
   const httpServer = createServer(app);
   app.use(cors());
   app.use(bodyParser.json({ limit: "5mb" }));
 
-  app.post("/api/post", createPost);
-  app.get("/api/post/:id", post);
+  app.use(multer({ fileFilter: fileFilter }).single("upload"));
+
+  app.post("/api/upload-file", async (req, res) => {
+    try {
+      const encoded = "data:image/png;base64," + req.file.buffer.toString("base64");
+      const result = await (<any>uploadToCloudinary(encoded));
+      res.status(200).send(result.url);
+    } catch (error) {
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.post("/api/fetch-url", (req, res) => {
+    try {
+      if(!req.body.url){
+        throw new Error("Url not found");
+      }
+      res.status(200).send(req.body.url);
+    } catch (error) {
+      res.status(500).send(error.message);
+    }
+  });
 
   const subscriptionServer = SubscriptionServer.create(
     { schema: graphqlSchema, execute, subscribe },

@@ -3,6 +3,7 @@ scalar JSon
 type Query {
   post(input: ID!): Post
   posts: [Post]
+  postsPage(input: Int!): [Post]
   myPost(input: ID!): [Post]
 }
 

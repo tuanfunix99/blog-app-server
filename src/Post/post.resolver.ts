@@ -36,7 +36,7 @@ const Query = {
   },
   async postsPage(parent: any, args: any) {
     const { input } = args;
-    const start = (input - 1) * input;  
+    const start = (4 * input) - 4;  
     try {
       let posts = await Post.find(
         {},

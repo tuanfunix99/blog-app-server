@@ -12,7 +12,7 @@ const PostSchema = new Schema(
     },
     backgroundPic: {
       type: String,
-      default: "/background.jpg",
+      default: "/background-post.jpg",
     },
     createdBy: {
       type: Schema.Types.ObjectId,

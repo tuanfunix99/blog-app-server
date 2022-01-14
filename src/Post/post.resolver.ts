@@ -11,7 +11,9 @@ const Query = {
   async post(parent: any, args: any) {
     const { input } = args;
     try {
-      const post = await Post.findOne({ _id: input }).populate("categories");
+      const post = await Post.findOne({ _id: input })
+        .populate("categories", "name")
+        .populate("createdBy", "username profilePic");
       post.content = JSON.stringify(post.content);
       return post;
     } catch (error) {
@@ -36,8 +38,10 @@ const Query = {
   },
   async postsPage(parent: any, args: any) {
     const { input } = args;
-    const start = (4 * input) - 4;  
+    const start = 4 * input - 4;
     try {
+      let amount = await Post.count();
+      const count = Math.ceil(amount / 4);
       let posts = await Post.find(
         {},
         "title backgroundPic createdAt categories",
@@ -46,7 +50,7 @@ const Query = {
         .sort({ createdAt: -1 })
         .populate("categories", "name")
         .populate("createdBy", "username profilePic");
-      return posts;
+      return { posts, count };
     } catch (error) {
       log.error(error.message, "Error get posts");
       throw new Error("Not found");
@@ -91,7 +95,7 @@ const Mutation = {
         categories: input.categories,
         createdBy: input.userId,
       });
-      if (input.backgroundPic !== "./background.jpg") {
+      if (input.backgroundPic !== "./background-post.jpg") {
         const result = await (<any>uploadToCloudinary(input.backgroundPic));
         post.backgroundPic = result.url;
       }
@@ -108,14 +112,17 @@ const Mutation = {
     const { input } = args;
     try {
       await auth(req, res);
-      const post = await Post.findOne({ _id: input }, "createdBy content backgroundPic");
+      const post = await Post.findOne(
+        { _id: input },
+        "createdBy content backgroundPic"
+      );
       if (!post) {
         throw new Error("Post not found");
       }
       if (post.createdBy.toString() !== res.locals.user._id.toString()) {
         throw new Error("User not allowed");
       }
-      if(post.backgroundPic !== "/background.jpg"){
+      if (post.backgroundPic !== "/background.jpg") {
         const arr = post.backgroundPic.split("/");
         const public_id = arr[arr.length - 1].split(".")[0];
         destroyCloudinary(public_id);

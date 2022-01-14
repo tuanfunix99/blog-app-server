@@ -60,6 +60,7 @@ async function startApolloServer() {
   app.use(multer({ fileFilter: fileFilter }).single("upload"));
 
   app.post("/api/upload-file", async (req, res) => {
+    console.log(req.file);
     try {
       let encoded = "";
       encoded = "data:image/png;base64," + req.file.buffer.toString("base64");

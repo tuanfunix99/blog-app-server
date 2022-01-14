@@ -3,13 +3,18 @@ scalar JSon
 type Query {
   post(input: ID!): Post
   posts: [Post]
-  postsPage(input: Int!): [Post]
+  postsPage(input: Int!): PostPage
   myPost(input: ID!): [Post]
 }
 
 type Mutation {
   createPost(input: createPostInput): ID!
   deletePost(input: ID!): Boolean
+}
+
+type PostPage{
+  posts: [Post]
+  count: Int
 }
 
 type Post {

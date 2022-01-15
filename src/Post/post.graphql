@@ -1,4 +1,5 @@
 scalar JSon
+scalar ObjectScalar
 
 type Query {
   post(input: ID!): Post
@@ -9,6 +10,7 @@ type Query {
 
 type Mutation {
   createPost(input: createPostInput): ID!
+  updatePost(input: updatePostInput): ID!
   deletePost(input: ID!): Boolean
 }
 
@@ -20,7 +22,7 @@ type PostPage{
 type Post {
   _id: ID!
   title: String!
-  content: JSon
+  content: ObjectScalar!
   backgroundPic: String!
   createdAt: String!
   categories: [Category]
@@ -29,7 +31,16 @@ type Post {
 
 input createPostInput {
   title: String!
-  content: JSon!
+  content: ObjectScalar!
+  backgroundPic: String!
+  categories: [ID]!
+  userId: ID!
+}
+
+input updatePostInput {
+  postId: ID!
+  title: String!
+  content: ObjectScalar!
   backgroundPic: String!
   categories: [ID]!
   userId: ID!

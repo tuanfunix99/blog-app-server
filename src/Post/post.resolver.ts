@@ -4,8 +4,22 @@ import cloudinary from "cloudinary";
 import { v4 as uuidv4 } from "uuid";
 import log from "../logger";
 import GraphQLJSON from "graphql-type-json";
+import { GraphQLScalarType } from "graphql";
 
 const JSon = GraphQLJSON;
+const ObjectScalar = new GraphQLScalarType({
+  name: "Object",
+  description: "Object custom scalar type",
+  serialize(value: object) {
+    return value;
+  },
+  parseValue(value: object) {
+    return value;
+  },
+  parseLiteral(ast) {
+    return null;
+  },
+});
 
 const Query = {
   async post(parent: any, args: any) {
@@ -14,7 +28,6 @@ const Query = {
       const post = await Post.findOne({ _id: input })
         .populate("categories", "name")
         .populate("createdBy", "username profilePic");
-      post.content = JSON.stringify(post.content);
       return post;
     } catch (error) {
       log.error(error.message, "Error get post");
@@ -83,7 +96,6 @@ const Mutation = {
   async createPost(parent: any, args: any, context: any) {
     const { req, res } = context;
     const { input } = args;
-    let objectContent = <any>JSon.parseValue(input.content);
     try {
       await auth(req, res);
       if (res.locals.user._id != input.userId) {
@@ -91,7 +103,7 @@ const Mutation = {
       }
       const post = new Post({
         title: input.title,
-        content: objectContent,
+        content: input.content,
         categories: input.categories,
         createdBy: input.userId,
       });
@@ -105,7 +117,7 @@ const Mutation = {
       log.error(error.message, "Error publish post");
       throw new Error("");
     }
-  },
+  },  
 
   async deletePost(parent: any, args: any, context: any) {
     const { req, res } = context;
@@ -146,6 +158,51 @@ const Mutation = {
       throw new Error("");
     }
   },
+
+  async updatePost(parent: any, args: any, context: any) {
+    const { req, res } = context;
+    const { input } = args;
+    try {
+      await auth(req, res);
+      if (res.locals.user._id != input.userId) {
+        throw new Error("User not allowed");
+      }
+      const post = await Post.findById({ _id: input.postId });
+      if (!post) {
+        throw new Error("Post not found");
+      }
+      post.title = input.title;
+      post.categories = [...input.categories];
+      if (
+        input.backgroundPic !== "./background-post.jpg" &&
+        input.backgroundPic !== post.backgroundPic
+      ) {
+        const arr = post.backgroundPic.split("/");
+        const public_id = arr[arr.length - 1].split(".")[0];
+        destroyCloudinary(public_id);
+        const result = await (<any>uploadToCloudinary(input.backgroundPic));
+        post.backgroundPic = result.url;
+      }
+      let imageBlocks = input.content.blocks
+        .filter((block: any) => block.type === "image")
+        .map((block: any) => block.data.file.url);
+      for (let block of post.content.blocks) {
+        if(block.type === "image"){
+          if(!imageBlocks.includes(block.data.file.url)){
+            const arr = block.data.file.url.split("/");
+            const public_id = arr[arr.length - 1].split(".")[0];
+            destroyCloudinary(public_id);
+          }
+        }
+      }
+      post.content = {...input.content};
+      await post.save();
+      return post._id;
+    } catch (error) {
+      log.error(error.message, "Error publish post");
+      throw new Error("");
+    }
+  },
 };
 
 const uploadToCloudinary = (image: any) => {
@@ -174,4 +231,4 @@ const destroyCloudinary = (public_id: string) => {
   });
 };
 
-export default { Query, Mutation, JSon };
+export default { Query, Mutation, ObjectScalar };

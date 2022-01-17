@@ -4,7 +4,8 @@ scalar ObjectScalar
 type Query {
   post(input: ID!): Post
   posts: [Post]
-  postsPage(input: Int!): PostPage
+  postsPage(input: postPageInput): PostPage
+  postCategory(input: postCategoryInput): PostPage
   myPost(input: ID!): [Post]
 }
 
@@ -27,6 +28,17 @@ type Post {
   createdAt: String!
   categories: [Category]
   createdBy: User
+}
+
+input postPageInput{
+  page: Int!
+  perPage: Int!
+}
+
+input postCategoryInput {
+  page: Int!
+  cat: String!
+  perPage: Int!
 }
 
 input createPostInput {

@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from "uuid";
 import log from "../logger";
 import GraphQLJSON from "graphql-type-json";
 import { GraphQLScalarType } from "graphql";
+import Category from "../Category/schema/Category";
 
 const JSon = GraphQLJSON;
 const ObjectScalar = new GraphQLScalarType({
@@ -50,15 +51,17 @@ const Query = {
     }
   },
   async postsPage(parent: any, args: any) {
-    const { input } = args;
-    const start = 4 * input - 4;
+    const {
+      input: { page, perPage },
+    } = args;
+    const start = perPage * page - perPage;
     try {
       let amount = await Post.count();
-      const count = Math.ceil(amount / 4);
+      const count = Math.ceil(amount / perPage);
       let posts = await Post.find(
         {},
         "title backgroundPic createdAt categories",
-        { skip: start, limit: 4 }
+        { skip: start, limit: perPage }
       )
         .sort({ createdAt: -1 })
         .populate("categories", "name")
@@ -66,6 +69,32 @@ const Query = {
       return { posts, count };
     } catch (error) {
       log.error(error.message, "Error get posts");
+      throw new Error("Not found");
+    }
+  },
+  async postCategory(parent: any, args: any) {
+    const {
+      input: { page, perPage, cat },
+    } = args;
+    const start = perPage * page - perPage;
+    try {
+      const category = await Category.findOne({ name: cat });
+      let amount = await (await Post.find({ categories: category._id })).length;
+      const count = Math.ceil(amount / perPage);
+      if (!category) {
+        throw new Error("Not found");
+      }
+      let posts = await Post.find(
+        { categories: category._id },
+        "title backgroundPic createdAt categories",
+        { skip: start, limit: perPage }
+      )
+        .sort({ createdAt: -1 })
+        .populate("categories", "name")
+        .populate("createdBy", "username profilePic");
+      return { posts, count };
+    } catch (error) {
+      log.error(error.message, "Error get post category");
       throw new Error("Not found");
     }
   },
@@ -117,7 +146,7 @@ const Mutation = {
       log.error(error.message, "Error publish post");
       throw new Error("");
     }
-  },  
+  },
 
   async deletePost(parent: any, args: any, context: any) {
     const { req, res } = context;
@@ -187,15 +216,20 @@ const Mutation = {
         .filter((block: any) => block.type === "image")
         .map((block: any) => block.data.file.url);
       for (let block of post.content.blocks) {
-        if(block.type === "image"){
-          if(!imageBlocks.includes(block.data.file.url)){
+        if (
+          block.type === "image" &&
+          block.data.file.url.includes(
+            "http://res.cloudinary.com/dqvbasiry/image/upload/"
+          )
+        ) {
+          if (!imageBlocks.includes(block.data.file.url)) {
             const arr = block.data.file.url.split("/");
             const public_id = arr[arr.length - 1].split(".")[0];
             destroyCloudinary(public_id);
           }
         }
       }
-      post.content = {...input.content};
+      post.content = { ...input.content };
       await post.save();
       return post._id;
     } catch (error) {

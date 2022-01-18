@@ -12,6 +12,8 @@ import bodyParser from "body-parser";
 import "./utils/mongodb";
 import multer from "multer";
 import { v4 as uuidv4 } from "uuid";
+import auth from "./middleware/auth";
+import User from "./User/schema/User";
 
 config();
 
@@ -61,17 +63,22 @@ async function startApolloServer() {
 
   app.post("/api/upload-file", async (req, res) => {
     try {
+      await auth(req, res);
+      const user = await User.findById(res.locals.user._id, "images");
       let encoded = "";
       encoded = "data:image/png;base64," + req.file.buffer.toString("base64");
       const result = await (<any>uploadToCloudinary(encoded));
+      user.images.push(result.url);
+      await user.save();
       res.status(200).send(result.url);
     } catch (error) {
       res.status(500).send(error.message);
     }
   });
 
-  app.post("/api/fetch-url", (req, res) => {
+  app.post("/api/fetch-url", async (req, res) => {
     try {
+      await auth(req, res);
       if (!req.body.url) {
         throw new Error("Url not found");
       }

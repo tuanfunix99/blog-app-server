@@ -24,6 +24,7 @@ const PostSchema = new Schema(
         ref: "Category",
       },
     ],
+    images: [String]
   },
   {
     timestamps: true,

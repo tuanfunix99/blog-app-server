@@ -6,6 +6,7 @@ type Query {
   posts: [Post]
   postsPage(input: postPageInput): PostPage
   postCategory(input: postCategoryInput): PostPage
+  search(input: searchInput): PostPage
   myPost(input: ID!): [Post]
 }
 
@@ -38,6 +39,12 @@ input postPageInput{
 input postCategoryInput {
   page: Int!
   cat: String!
+  perPage: Int!
+}
+
+input searchInput {
+  page: Int!
+  title: String!
   perPage: Int!
 }
 

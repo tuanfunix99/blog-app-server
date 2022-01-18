@@ -47,6 +47,7 @@ const UserSchema = new Schema(
     code: { type: String, default: "" },
     token: { type: String },
     isAdmin: { type: Boolean, default: false },
+    images: [String]
   },
   {
     timestamps: true,

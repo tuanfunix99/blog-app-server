@@ -6,6 +6,7 @@ import log from "../logger";
 import GraphQLJSON from "graphql-type-json";
 import { GraphQLScalarType } from "graphql";
 import Category from "../Category/schema/Category";
+import User from "../User/schema/User";
 
 const JSon = GraphQLJSON;
 const ObjectScalar = new GraphQLScalarType({
@@ -98,6 +99,28 @@ const Query = {
       throw new Error("Not found");
     }
   },
+  async search(parent: any, args: any) {
+    const {
+      input: { page, perPage, title },
+    } = args;
+    const start = perPage * page - perPage;
+    try {
+      let posts = await Post.find(
+        { title: { $regex: '.*' + title + '.*' }  },
+        "title backgroundPic createdAt categories",
+        { skip: start, limit: perPage }
+      )
+        .sort({ createdAt: -1 })
+        .populate("categories", "name")
+        .populate("createdBy", "username profilePic");
+      let amount = posts.length;
+      const count = Math.ceil(amount / perPage);
+      return { posts, count };
+    } catch (error) {
+      log.error(error.message, "Error get post category");
+      throw new Error("Not found");
+    }
+  },
   async myPost(parent: any, args: any, context: any) {
     const { input } = args;
     const { req, res } = context;
@@ -127,7 +150,8 @@ const Mutation = {
     const { input } = args;
     try {
       await auth(req, res);
-      if (res.locals.user._id != input.userId) {
+      const user = await User.findById(res.locals.user._id, "images");
+      if (user._id != input.userId) {
         throw new Error("User not allowed");
       }
       const post = new Post({
@@ -140,6 +164,25 @@ const Mutation = {
         const result = await (<any>uploadToCloudinary(input.backgroundPic));
         post.backgroundPic = result.url;
       }
+      let imageBlocks = input.content.blocks
+        .filter(
+          (block: any) =>
+            block.type === "image" &&
+            block.data.file.url.includes(
+              "http://res.cloudinary.com/dqvbasiry/image/upload/"
+            )
+        )
+        .map((block: any) => block.data.file.url);
+      post.images = [...imageBlocks];
+      for (let image of user.images) {
+        if (!imageBlocks.includes(image)) {
+          const arr = image.split("/");
+          const public_id = arr[arr.length - 1].split(".")[0];
+          destroyCloudinary(public_id);
+        }
+      }
+      user.images = [""];
+      await user.save();
       await post.save();
       return post._id;
     } catch (error) {
@@ -155,7 +198,7 @@ const Mutation = {
       await auth(req, res);
       const post = await Post.findOne(
         { _id: input },
-        "createdBy content backgroundPic"
+        "createdBy content backgroundPic images"
       );
       if (!post) {
         throw new Error("Post not found");
@@ -168,18 +211,11 @@ const Mutation = {
         const public_id = arr[arr.length - 1].split(".")[0];
         destroyCloudinary(public_id);
       }
-      post.content.blocks.map((block: any) => {
-        if (
-          block.type === "image" &&
-          block.data.file.url.includes(
-            "http://res.cloudinary.com/dqvbasiry/image/upload/"
-          )
-        ) {
-          const arr = block.data.file.url.split("/");
-          const public_id = arr[arr.length - 1].split(".")[0];
-          destroyCloudinary(public_id);
-        }
-      });
+      for (let image of post.images) {
+        const arr = image.split("/");
+        const public_id = arr[arr.length - 1].split(".")[0];
+        destroyCloudinary(public_id);
+      }
       await Post.findOneAndRemove({ _id: input });
       return true;
     } catch (error) {
@@ -193,7 +229,8 @@ const Mutation = {
     const { input } = args;
     try {
       await auth(req, res);
-      if (res.locals.user._id != input.userId) {
+      const user = await User.findById(res.locals.user._id, "images");
+      if (user._id != input.userId) {
         throw new Error("User not allowed");
       }
       const post = await Post.findById({ _id: input.postId });
@@ -213,23 +250,24 @@ const Mutation = {
         post.backgroundPic = result.url;
       }
       let imageBlocks = input.content.blocks
-        .filter((block: any) => block.type === "image")
+        .filter(
+          (block: any) =>
+            block.type === "image" &&
+            block.data.file.url.includes(
+              "http://res.cloudinary.com/dqvbasiry/image/upload/"
+            )
+        )
         .map((block: any) => block.data.file.url);
-      for (let block of post.content.blocks) {
-        if (
-          block.type === "image" &&
-          block.data.file.url.includes(
-            "http://res.cloudinary.com/dqvbasiry/image/upload/"
-          )
-        ) {
-          if (!imageBlocks.includes(block.data.file.url)) {
-            const arr = block.data.file.url.split("/");
-            const public_id = arr[arr.length - 1].split(".")[0];
-            destroyCloudinary(public_id);
-          }
+      for (let image of post.images) {
+        if (!imageBlocks.includes(image)) {
+          const arr = image.split("/");
+          const public_id = arr[arr.length - 1].split(".")[0];
+          destroyCloudinary(public_id);
         }
       }
       post.content = { ...input.content };
+      user.images = [""];
+      await user.save();
       await post.save();
       return post._id;
     } catch (error) {

@@ -7,6 +7,8 @@ import GraphQLJSON from "graphql-type-json";
 import { GraphQLScalarType } from "graphql";
 import Category from "../Category/schema/Category";
 import User from "../User/schema/User";
+import { subscribe } from "graphql";
+import { PubSub } from "graphql-subscriptions";
 
 const JSon = GraphQLJSON;
 const ObjectScalar = new GraphQLScalarType({
@@ -22,6 +24,8 @@ const ObjectScalar = new GraphQLScalarType({
     return null;
   },
 });
+
+const pubsub = new PubSub();
 
 const Query = {
   async post(parent: any, args: any) {
@@ -106,7 +110,7 @@ const Query = {
     const start = perPage * page - perPage;
     try {
       let posts = await Post.find(
-        { title: { $regex: '.*' + title + '.*' }  },
+        { title: { $regex: ".*" + title + ".*" } },
         "title backgroundPic createdAt categories",
         { skip: start, limit: perPage }
       )
@@ -184,6 +188,15 @@ const Mutation = {
       user.images = [""];
       await user.save();
       await post.save();
+      let p = await Post.findOne(
+        { _id: post._id },
+        "title backgroundPic createdAt categories"
+      )
+        .populate("categories", "name")
+        .populate("createdBy", "username profilePic");
+      pubsub.publish("CREATED_POST", {
+        createdPost: p,
+      });
       return post._id;
     } catch (error) {
       log.error(error.message, "Error publish post");
@@ -217,6 +230,41 @@ const Mutation = {
         destroyCloudinary(public_id);
       }
       await Post.findOneAndRemove({ _id: input });
+      return true;
+    } catch (error) {
+      log.error(error.message, "Error delete post");
+      throw new Error("");
+    }
+  },
+
+  async deletePosts(parent: any, args: any, context: any) {
+    const { req, res } = context;
+    const { input } = args;
+    try {
+      await auth(req, res);
+      for (let postId of input) {
+        const post = await Post.findOne(
+          { _id: postId },
+          "createdBy content backgroundPic images"
+        );
+        if (!post) {
+          continue;
+        }
+        if (post.createdBy.toString() !== res.locals.user._id.toString()) {
+          continue;
+        }
+        if (post.backgroundPic !== "/background.jpg") {
+          const arr = post.backgroundPic.split("/");
+          const public_id = arr[arr.length - 1].split(".")[0];
+          destroyCloudinary(public_id);
+        }
+        for (let image of post.images) {
+          const arr = image.split("/");
+          const public_id = arr[arr.length - 1].split(".")[0];
+          destroyCloudinary(public_id);
+        }
+        await Post.findOneAndRemove({ _id: postId });
+      }
       return true;
     } catch (error) {
       log.error(error.message, "Error delete post");
@@ -277,6 +325,12 @@ const Mutation = {
   },
 };
 
+const Subscription = {
+  createdPost: {
+    subscribe: () => pubsub.asyncIterator(["CREATED_POST"]),
+  },
+};
+
 const uploadToCloudinary = (image: any) => {
   return new Promise(function (resolve, reject) {
     cloudinary.v2.uploader.upload(
@@ -303,4 +357,4 @@ const destroyCloudinary = (public_id: string) => {
   });
 };
 
-export default { Query, Mutation, ObjectScalar };
+export default { Query, Mutation, ObjectScalar, Subscription };

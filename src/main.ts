@@ -30,7 +30,7 @@ const fileFilter = (req: any, file: any, callback: any) => {
     file.mimetype === "image/png" ||
     file.mimetype === "image/jpg" ||
     file.mimetype === "image/jpeg" ||
-    file.mimeType === "image/gif"
+    file.mimetype === "image/gif"
   ) {
     callback(null, true);
   } else {
@@ -66,12 +66,18 @@ async function startApolloServer() {
       await auth(req, res);
       const user = await User.findById(res.locals.user._id, "images");
       let encoded = "";
-      encoded = "data:image/png;base64," + req.file.buffer.toString("base64");
+      if(req.file.mimetype === "image/gif"){
+        encoded = "data:image/gif;base64," + req.file.buffer.toString("base64");
+      }
+      else{
+        encoded = "data:image/png;base64," + req.file.buffer.toString("base64");
+      }
       const result = await (<any>uploadToCloudinary(encoded));
       user.images.push(result.url);
       await user.save();
       res.status(200).send(result.url);
     } catch (error) {
+      log.error(error.message, "Error uploading");
       res.status(500).send(error.message);
     }
   });

@@ -14,4 +14,4 @@ connect(MONGODB_URL, options as ConnectOptions)
   .then(() => {
     log.info("Connected to MongoDB");
   })
-  .catch((err) => log.error(err.message, "Error connect to MongoDB"));
+  .catch((err) => log.error({error: err.message}, "Error connect to MongoDB"));

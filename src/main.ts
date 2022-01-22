@@ -1,6 +1,5 @@
 import express from "express";
 import { createServer } from "http";
-import log from "./logger";
 import { config } from "dotenv";
 import { ApolloServer } from "apollo-server-express";
 import graphqlSchema from "./graphql.schema";
@@ -11,9 +10,10 @@ import cloudinary from "cloudinary";
 import bodyParser from "body-parser";
 import "./utils/mongodb";
 import multer from "multer";
-import { v4 as uuidv4 } from "uuid";
 import auth from "./middleware/auth";
 import User from "./User/schema/User";
+import log from "./logger";
+import { uploadToCloudinary } from "./utils/cloudinary";
 
 config();
 
@@ -38,21 +38,6 @@ const fileFilter = (req: any, file: any, callback: any) => {
   }
 };
 
-const uploadToCloudinary = (image: any) => {
-  return new Promise(function (resolve, reject) {
-    cloudinary.v2.uploader.upload(
-      image,
-      { public_id: `${Date.now()}-${uuidv4()}` },
-      async function (error, result) {
-        if (error) {
-          return reject(error);
-        }
-        return resolve(result);
-      }
-    );
-  });
-};
-
 async function startApolloServer() {
   const app = express();
   const httpServer = createServer(app);
@@ -66,13 +51,13 @@ async function startApolloServer() {
       await auth(req, res);
       const user = await User.findById(res.locals.user._id, "images");
       let encoded = "";
-      if(req.file.mimetype === "image/gif"){
+      if (req.file.mimetype === "image/gif") {
         encoded = "data:image/gif;base64," + req.file.buffer.toString("base64");
-      }
-      else{
+      } else {
         encoded = "data:image/png;base64," + req.file.buffer.toString("base64");
       }
-      const result = await (<any>uploadToCloudinary(encoded));
+      const result = await (<any>uploadToCloudinary(encoded, user._id));
+
       user.images.push(result.url);
       await user.save();
       res.status(200).send(result.url);

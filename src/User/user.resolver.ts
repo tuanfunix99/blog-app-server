@@ -8,12 +8,11 @@ import { Error } from "mongoose";
 import jwt from "jsonwebtoken";
 import { config } from "dotenv";
 import auth from "../middleware/auth";
-import cloudinary from "cloudinary";
-import { v4 as uuidv4 } from "uuid";
 import { subscribe } from "graphql";
 import { PubSub } from "graphql-subscriptions";
 import validator from "validator";
 import GraphQLJSON from "graphql-type-json";
+import { uploadToCloudinary, destroyCloudinary } from '../utils/cloudinary';
 
 config();
 
@@ -187,8 +186,10 @@ const Mutation = {
         url: "",
         public_id: "",
       };
-      await destroyCloudinary(args.input.public_id);
-      const result = await (<any>uploadToCloudinary(args.input.image));
+      if(args.input.profilePic !== "/default-profile.png"){
+        await destroyCloudinary(args.input.profilePic);
+      }
+      const result = await (<any>uploadToCloudinary(args.input.image, user._id));
       user.profilePic = result.url;
       cloud_data.url = result.url;
       cloud_data.public_id = result.public_id;
@@ -274,30 +275,5 @@ const Subscription = {
   },
 };
 
-const uploadToCloudinary = (image: any) => {
-  return new Promise(function (resolve, reject) {
-    cloudinary.v2.uploader.upload(
-      image,
-      { public_id: `${Date.now()}-${uuidv4()}` },
-      async function (error, result) {
-        if (error) {
-          return reject(error);
-        }
-        return resolve(result);
-      }
-    );
-  });
-};
-
-const destroyCloudinary = (public_id: string) => {
-  return new Promise(function (resolve, reject) {
-    cloudinary.v2.uploader.destroy(public_id, function (error, result) {
-      if (error) {
-        return reject(error);
-      }
-      return resolve(result);
-    });
-  });
-};
 
 export default { Query, Mutation, Subscription, JSon };

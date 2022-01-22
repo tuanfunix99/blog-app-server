@@ -40,7 +40,7 @@ input updatePasswordInput{
 }
 
 input uploadProfilePicInput{
-  public_id: String,
+  profilePic: String,
   image: String,
 }
 

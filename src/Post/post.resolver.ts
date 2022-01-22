@@ -1,7 +1,5 @@
 import auth from "../middleware/auth";
 import Post from "./schema/Post";
-import cloudinary from "cloudinary";
-import { v4 as uuidv4 } from "uuid";
 import log from "../logger";
 import GraphQLJSON from "graphql-type-json";
 import { GraphQLScalarType } from "graphql";
@@ -9,6 +7,7 @@ import Category from "../Category/schema/Category";
 import User from "../User/schema/User";
 import { subscribe } from "graphql";
 import { PubSub } from "graphql-subscriptions";
+import { uploadToCloudinary, destroyCloudinary } from "../utils/cloudinary";
 
 const JSon = GraphQLJSON;
 const ObjectScalar = new GraphQLScalarType({
@@ -165,7 +164,9 @@ const Mutation = {
         createdBy: input.userId,
       });
       if (input.backgroundPic !== "./background-post.jpg") {
-        const result = await (<any>uploadToCloudinary(input.backgroundPic));
+        const result = await (<any>(
+          uploadToCloudinary(input.backgroundPic, user._id)
+        ));
         post.backgroundPic = result.url;
       }
       let imageBlocks = input.content.blocks
@@ -180,9 +181,7 @@ const Mutation = {
       post.images = [...imageBlocks];
       for (let image of user.images) {
         if (!imageBlocks.includes(image)) {
-          const arr = image.split("/");
-          const public_id = arr[arr.length - 1].split(".")[0];
-          destroyCloudinary(public_id);
+          destroyCloudinary(image);
         }
       }
       user.images = [""];
@@ -220,14 +219,10 @@ const Mutation = {
         throw new Error("User not allowed");
       }
       if (post.backgroundPic !== "/background.jpg") {
-        const arr = post.backgroundPic.split("/");
-        const public_id = arr[arr.length - 1].split(".")[0];
-        destroyCloudinary(public_id);
+        destroyCloudinary(post.backgroundPic);
       }
       for (let image of post.images) {
-        const arr = image.split("/");
-        const public_id = arr[arr.length - 1].split(".")[0];
-        destroyCloudinary(public_id);
+        destroyCloudinary(image);
       }
       await Post.findOneAndRemove({ _id: input });
       return true;
@@ -243,6 +238,7 @@ const Mutation = {
     try {
       await auth(req, res);
       for (let postId of input) {
+        console.log(postId);
         const post = await Post.findOne(
           { _id: postId },
           "createdBy content backgroundPic images"
@@ -254,14 +250,10 @@ const Mutation = {
           continue;
         }
         if (post.backgroundPic !== "/background.jpg") {
-          const arr = post.backgroundPic.split("/");
-          const public_id = arr[arr.length - 1].split(".")[0];
-          destroyCloudinary(public_id);
+          destroyCloudinary(post.backgroundPic);
         }
         for (let image of post.images) {
-          const arr = image.split("/");
-          const public_id = arr[arr.length - 1].split(".")[0];
-          destroyCloudinary(public_id);
+          destroyCloudinary(image);
         }
         await Post.findOneAndRemove({ _id: postId });
       }
@@ -291,10 +283,10 @@ const Mutation = {
         input.backgroundPic !== "./background-post.jpg" &&
         input.backgroundPic !== post.backgroundPic
       ) {
-        const arr = post.backgroundPic.split("/");
-        const public_id = arr[arr.length - 1].split(".")[0];
-        destroyCloudinary(public_id);
-        const result = await (<any>uploadToCloudinary(input.backgroundPic));
+        destroyCloudinary(post.backgroundPic);
+        const result = await (<any>(
+          uploadToCloudinary(input.backgroundPic, user._id)
+        ));
         post.backgroundPic = result.url;
       }
       let imageBlocks = input.content.blocks
@@ -308,9 +300,12 @@ const Mutation = {
         .map((block: any) => block.data.file.url);
       for (let image of post.images) {
         if (!imageBlocks.includes(image)) {
-          const arr = image.split("/");
-          const public_id = arr[arr.length - 1].split(".")[0];
-          destroyCloudinary(public_id);
+          destroyCloudinary(image);
+        }
+      }
+      for (let image of user.images) {
+        if (!imageBlocks.includes(image)) {
+          destroyCloudinary(image);
         }
       }
       post.content = { ...input.content };
@@ -329,32 +324,6 @@ const Subscription = {
   createdPost: {
     subscribe: () => pubsub.asyncIterator(["CREATED_POST"]),
   },
-};
-
-const uploadToCloudinary = (image: any) => {
-  return new Promise(function (resolve, reject) {
-    cloudinary.v2.uploader.upload(
-      image,
-      { public_id: `${Date.now()}-${uuidv4()}` },
-      async function (error, result) {
-        if (error) {
-          return reject(error);
-        }
-        return resolve(result);
-      }
-    );
-  });
-};
-
-const destroyCloudinary = (public_id: string) => {
-  return new Promise(function (resolve, reject) {
-    cloudinary.v2.uploader.destroy(public_id, function (error, result) {
-      if (error) {
-        return reject(error);
-      }
-      return resolve(result);
-    });
-  });
 };
 
 export default { Query, Mutation, ObjectScalar, Subscription };

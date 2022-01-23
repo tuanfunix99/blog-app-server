@@ -60,4 +60,5 @@ type User {
   username: String!
   email: String!
   profilePic: String
+  passportId: String
 }

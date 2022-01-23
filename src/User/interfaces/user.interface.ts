@@ -8,5 +8,6 @@ export interface IUser {
   isActive: boolean;
   code: string;
   token: string;
-  images: [string]
+  images: [string];
+  passportId: string;
 }

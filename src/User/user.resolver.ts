@@ -12,7 +12,7 @@ import { subscribe } from "graphql";
 import { PubSub } from "graphql-subscriptions";
 import validator from "validator";
 import GraphQLJSON from "graphql-type-json";
-import { uploadToCloudinary, destroyCloudinary } from '../utils/cloudinary';
+import { uploadToCloudinary, destroyCloudinary } from "../utils/cloudinary";
 
 config();
 
@@ -137,17 +137,9 @@ const Mutation = {
         });
         throw error;
       }
-      const key_secret = generator.generate({
-        length: 15,
-        symbols: true,
+      user.token = jwt.sign({ _id: user._id }, process.env.PRIVATE_KEY, {
+        expiresIn: "24h",
       });
-      user.token = jwt.sign(
-        { _id: user._id, key_secret },
-        process.env.PRIVATE_KEY,
-        {
-          expiresIn: "24h",
-        }
-      );
       await user.save();
       return user.token;
     } catch (error) {
@@ -168,6 +160,7 @@ const Mutation = {
     try {
       const { req, res } = context;
       await auth(req, res);
+      req.logout();
       const user = await User.findById(res.locals.user._id);
       user.token = "";
       await user.save();
@@ -186,10 +179,12 @@ const Mutation = {
         url: "",
         public_id: "",
       };
-      if(args.input.profilePic !== "/default-profile.png"){
+      if (args.input.profilePic !== "/default-profile.png") {
         await destroyCloudinary(args.input.profilePic);
       }
-      const result = await (<any>uploadToCloudinary(args.input.image, user._id));
+      const result = await (<any>(
+        uploadToCloudinary(args.input.image, user._id)
+      ));
       user.profilePic = result.url;
       cloud_data.url = result.url;
       cloud_data.public_id = result.public_id;
@@ -212,11 +207,17 @@ const Mutation = {
       await auth(req, res);
       const user = await User.findById(res.locals.user._id);
       const { username, email } = args.input;
-      if (validator.isEmpty(username) || validator.isEmpty(email)) {
-        throw new Error("Value is required");
-      }
-      if (!validator.isEmail(email)) {
-        throw new Error("Email not valid");
+      if (!user.passportId) {
+        if (validator.isEmpty(username) || validator.isEmpty(email)) {
+          throw new Error("Value is required");
+        }
+        if (!validator.isEmail(email)) {
+          throw new Error("Email not valid");
+        }
+      } else {
+        if (validator.isEmpty(username)) {
+          throw new Error("Value is required");
+        }
       }
       user.username = username;
       user.email = email;
@@ -274,6 +275,5 @@ const Subscription = {
     subscribe: () => pubsub.asyncIterator(["UPLOADED_PROFILEPIC"]),
   },
 };
-
 
 export default { Query, Mutation, Subscription, JSon };

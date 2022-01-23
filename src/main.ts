@@ -10,10 +10,13 @@ import cloudinary from "cloudinary";
 import bodyParser from "body-parser";
 import "./utils/mongodb";
 import multer from "multer";
-import auth from "./middleware/auth";
-import User from "./User/schema/User";
 import log from "./logger";
-import { uploadToCloudinary } from "./utils/cloudinary";
+import cookieParser from "cookie-parser";
+import passport from "passport";
+import session from "express-session";
+const MongoDBStore = require("connect-mongodb-session")(session);
+import userRoutes from './routes/user';
+require("./utils/passport");
 
 config();
 
@@ -38,46 +41,34 @@ const fileFilter = (req: any, file: any, callback: any) => {
   }
 };
 
+const store = new MongoDBStore({
+  uri: process.env.MONGODB_URL,
+  expires: 1000 * 3600 * 24,
+});
+
 async function startApolloServer() {
   const app = express();
   const httpServer = createServer(app);
+  const corsOptions = {
+    origin: "*",
+    credentials: true,
+    exposedHeaders: ["Authorization"],
+  };
   app.use(cors());
   app.use(bodyParser.json({ limit: "5mb" }));
-
+  app.use(cookieParser());
   app.use(multer({ fileFilter: fileFilter }).single("upload"));
-
-  app.post("/api/upload-file", async (req, res) => {
-    try {
-      await auth(req, res);
-      const user = await User.findById(res.locals.user._id, "images");
-      let encoded = "";
-      if (req.file.mimetype === "image/gif") {
-        encoded = "data:image/gif;base64," + req.file.buffer.toString("base64");
-      } else {
-        encoded = "data:image/png;base64," + req.file.buffer.toString("base64");
-      }
-      const result = await (<any>uploadToCloudinary(encoded, user._id));
-
-      user.images.push(result.url);
-      await user.save();
-      res.status(200).send(result.url);
-    } catch (error) {
-      log.error(error.message, "Error uploading");
-      res.status(500).send(error.message);
-    }
-  });
-
-  app.post("/api/fetch-url", async (req, res) => {
-    try {
-      await auth(req, res);
-      if (!req.body.url) {
-        throw new Error("Url not found");
-      }
-      res.status(200).send(req.body.url);
-    } catch (error) {
-      res.status(500).send(error.message);
-    }
-  });
+  app.use(
+    session({
+      secret: process.env.SESSION_SECRET,
+      saveUninitialized: true,
+      resave: true,
+      store: store,
+    })
+  );
+  app.use(passport.initialize());
+  app.use(passport.session());
+  app.use(userRoutes);
 
   const subscriptionServer = SubscriptionServer.create(
     { schema: graphqlSchema, execute, subscribe },
@@ -104,6 +95,7 @@ async function startApolloServer() {
 
   server.applyMiddleware({
     app,
+    cors: corsOptions,
     path: "/graphiql",
   });
 

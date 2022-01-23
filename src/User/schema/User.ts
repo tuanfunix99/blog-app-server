@@ -7,7 +7,6 @@ const UserSchema = new Schema(
     username: {
       type: String,
       required: [true, "Username is required"],
-      unique: true,
       trim: true,
       validate(value: any) {
         if (value.includes(" ")) {
@@ -17,7 +16,6 @@ const UserSchema = new Schema(
     },
     email: {
       type: String,
-      required: [true, "Email is required"],
       unique: true,
       trim: true,
       validate(value: any) {
@@ -29,7 +27,6 @@ const UserSchema = new Schema(
     password: {
       type: String,
       trim: true,
-      required: [true, "Password is required"],
       validate(value: any) {
         const valueCharacters = value.trim().length;
         if (valueCharacters < 8 || valueCharacters > 64) {
@@ -47,7 +44,8 @@ const UserSchema = new Schema(
     code: { type: String, default: "" },
     token: { type: String },
     isAdmin: { type: Boolean, default: false },
-    images: [String]
+    images: [String],
+    passportId: { type: String, default: null },
   },
   {
     timestamps: true,

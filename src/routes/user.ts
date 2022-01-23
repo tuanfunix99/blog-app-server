@@ -55,11 +55,11 @@ router.get("/api/passport/failure", (req, res) => {
   res.send("Login Failed");
 });
 
-router.get("/api/passport/logout", (req, res) => {
-  req.logOut();
-  req.logout();
-  res.send("success");
-});
+// router.get("/api/passport/logout", (req, res) => {
+//   req.logOut();
+//   req.logout();
+//   res.send("success");
+// });
 
 router.post("/api/upload-file", async (req, res) => {
   try {

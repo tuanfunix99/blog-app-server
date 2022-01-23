@@ -5,6 +5,7 @@ import auth from "../middleware/auth";
 import { uploadToCloudinary } from "../utils/cloudinary";
 import log from "../logger";
 import { socialAuth } from "../utils/socialProvidersAuth";
+let token = "";
 
 const router = Router();
 
@@ -15,10 +16,11 @@ router.get(
 
 router.get(
   "/auth/google/callback",
-  passport.authenticate("google", {
-    successRedirect: process.env.HTTP_LINK_FRONT_END,
-    failureRedirect: "/api/passport/failure",
-  })
+  passport.authenticate("google", { failureRedirect: "/api/passport/failure" }),
+  async function (req, res, next) {
+    token = await socialAuth(req, res);
+    res.redirect(process.env.HTTP_LINK_FRONT_END);
+  }
 );
 
 router.get(
@@ -29,15 +31,21 @@ router.get(
 router.get(
   "/auth/github/callback",
   passport.authenticate("github", { failureRedirect: "/api/passport/failure" }),
-  function (req, res) {
+  async function (req, res) {
+    token = await socialAuth(req, res);
     res.redirect(process.env.HTTP_LINK_FRONT_END);
   }
 );
 
 router.get("/api/passport/success", async (req, res) => {
   try {
-    const token = await socialAuth(req, res);
-    res.status(200).send(token);
+    if(token.trim() !== ""){
+      res.status(200).send({ token: token });
+      token = "";
+    }
+    else{
+      throw new Error("Can't not access");
+    }
   } catch (error) {
     res.status(500).send({ error: error.message });
   }

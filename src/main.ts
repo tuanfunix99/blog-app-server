@@ -15,7 +15,7 @@ import cookieParser from "cookie-parser";
 import passport from "passport";
 import session from "express-session";
 const MongoDBStore = require("connect-mongodb-session")(session);
-import userRoutes from './routes/user';
+import userRoutes from "./routes/user";
 require("./utils/passport");
 
 config();
@@ -49,12 +49,13 @@ const store = new MongoDBStore({
 async function startApolloServer() {
   const app = express();
   const httpServer = createServer(app);
-  const corsOptions = {
-    origin: "*",
-    credentials: true,
-    exposedHeaders: ["Authorization"],
-  };
-  app.use(cors());
+  app.use(
+    cors({
+      origin: "*",
+      methods: ["POST", "GET"],
+      credentials: true,
+    })
+  );
   app.use(bodyParser.json({ limit: "5mb" }));
   app.use(cookieParser());
   app.use(multer({ fileFilter: fileFilter }).single("upload"));
@@ -64,6 +65,11 @@ async function startApolloServer() {
       saveUninitialized: true,
       resave: true,
       store: store,
+      cookie: {
+        secure: process.env.NODE_ENV == "production",
+        maxAge: 24 * 60 * 60 * 1000,
+        httpOnly: false,
+      },
     })
   );
   app.use(passport.initialize());
@@ -95,7 +101,6 @@ async function startApolloServer() {
 
   server.applyMiddleware({
     app,
-    cors: corsOptions,
     path: "/graphiql",
   });
 

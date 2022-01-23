@@ -3,7 +3,7 @@ const GitHubStrategy = require("passport-github2").Strategy;
 const passport = require("passport");
 import User from "../User/schema/User";
 
-require('dotenv').config();
+require("dotenv").config();
 
 passport.use(
   new GoogleStrategy(
@@ -11,6 +11,7 @@ passport.use(
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       callbackURL: "/auth/google/callback",
+      proxy: true,
     },
     async function (
       accessToken: any,
@@ -52,6 +53,7 @@ passport.use(
       clientID: process.env.GITHUB_CLIENT_ID,
       clientSecret: process.env.GITHUB_CLIENT_SECRET,
       callbackURL: "/auth/github/callback",
+      proxy: true,
     },
     async function (
       accessToken: any,

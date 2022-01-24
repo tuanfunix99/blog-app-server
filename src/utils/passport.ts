@@ -1,5 +1,5 @@
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
-const GitHubStrategy = require("passport-github2").Strategy;
+const GitHubStrategy = require('passport-github').Strategy;
 const passport = require("passport");
 import User from "../User/schema/User";
 

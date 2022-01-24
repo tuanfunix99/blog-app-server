@@ -6,14 +6,13 @@ import { AuthenticationError } from "apollo-server-express";
 import log from "../logger";
 
 config();
-
 const auth = async (req: Request, res: Response) => {
   const token = req.headers.authorization as string;
   try {
     const userDecode = <any>jwt.verify(token, process.env.PRIVATE_KEY);
     const user = await User.findById(
       userDecode._id,
-      "username email profilePic token isActive passportId"
+      "username email role profilePic token isActive passportId"
     );
     if (!user) {
       throw new Error("User not found");
@@ -31,4 +30,11 @@ const auth = async (req: Request, res: Response) => {
   }
 };
 
+// exports.authorizationRole = (user: any, roles: string[]) => {
+//   if(!roles.includes(user.role)){
+//     throw new AuthenticationError("Not Authenticate");
+//   }
+// }
+
 export default auth;
+

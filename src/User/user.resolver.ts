@@ -13,6 +13,7 @@ import { PubSub } from "graphql-subscriptions";
 import validator from "validator";
 import GraphQLJSON from "graphql-type-json";
 import { uploadToCloudinary, destroyCloudinary } from "../utils/cloudinary";
+import Contact from "./schema/Contact";
 
 config();
 
@@ -57,7 +58,7 @@ const Mutation = {
         numbers: true,
       });
       await user.save();
-      await sendMail({ email: user.email, code: user.code, password: null});
+      await sendMail({ email: user.email, code: user.code, password: null });
       return true;
     } catch (error) {
       if (error.name === "ValidationError") {
@@ -175,7 +176,7 @@ const Mutation = {
       });
       user.password = await hash(newPassword, 8);
       await user.save();
-      await sendMail({ email: user.email, code: null, password: newPassword});
+      await sendMail({ email: user.email, code: null, password: newPassword });
       return true;
     } catch (error) {
       if (error.name === "ValidationError") {
@@ -300,6 +301,26 @@ const Mutation = {
         }
       }
       log.error(errors, "Active Account");
+      throw new UserInputError("Bad Input", { errors });
+    }
+  },
+
+  async contact(parent: any, args: any) {
+    let errors: Errors = {};
+    const { input } = args;
+    try {
+      await Contact.create(input);
+      return true;
+    } catch (error) {
+      if (error.name === "ValidationError") {
+        for (const property in error.errors) {
+          if (error.errors[property].kind === "unique") {
+            continue;
+          }
+          errors[property] = error.errors[property].message;
+        }
+      }
+      log.error(errors, "Contact");
       throw new UserInputError("Bad Input", { errors });
     }
   },

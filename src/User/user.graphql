@@ -14,6 +14,7 @@ type Mutation {
   uploadProfilePic(input: uploadProfilePicInput): Cloudinary!
   updateInfo(input: updateInfoInput): User
   updatePassword(input: updatePasswordInput): Boolean
+  contact(input: contactInput): Boolean!
 }
 
 type Subscription {
@@ -28,6 +29,12 @@ type Cloudinary{
 type UploadedProfilePic{
   user_id: String,
   image: String,
+}
+
+input contactInput{
+  name: String,
+  email: String,
+  content: String,
 }
 
 input updateInfoInput{
@@ -62,4 +69,5 @@ type User {
   email: String!
   profilePic: String
   passportId: String
+  role: String
 }

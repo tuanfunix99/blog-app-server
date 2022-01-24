@@ -43,7 +43,7 @@ const UserSchema = new Schema(
     },
     code: { type: String, default: "" },
     token: { type: String },
-    isAdmin: { type: Boolean, default: false },
+    role: { type: String, default: "user" },
     images: [String],
     passportId: { type: String, default: null },
   },

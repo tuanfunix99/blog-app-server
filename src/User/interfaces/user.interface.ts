@@ -10,4 +10,5 @@ export interface IUser {
   token: string;
   images: [string];
   passportId: string;
+  role: string;
 }

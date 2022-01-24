@@ -8,7 +8,6 @@ import { SubscriptionServer } from "subscriptions-transport-ws";
 import cors from "cors";
 import cloudinary from "cloudinary";
 import bodyParser from "body-parser";
-import "./utils/mongodb";
 import multer from "multer";
 import log from "./logger";
 import cookieParser from "cookie-parser";
@@ -16,6 +15,8 @@ import passport from "passport";
 import session from "express-session";
 const MongoDBStore = require("connect-mongodb-session")(session);
 import userRoutes from "./routes/user";
+
+import "./utils/mongodb";
 require("./utils/passport");
 
 config();

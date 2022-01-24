@@ -46,45 +46,45 @@ passport.use(
   )
 );
 
-// passport.use(
-//   new GitHubStrategy(
-//     {
-//       clientID: process.env.GITHUB_CLIENT_ID,
-//       clientSecret: process.env.GITHUB_CLIENT_SECRET,
-//       callbackURL: "/auth/github/callback",
-//     },
-//     async function (
-//       accessToken: any,
-//       refreshToken: any,
-//       profile: any,
-//       done: any
-//     ) {
-//       try {
-//         const id = profile.id + "gh";
-//         const user = await User.findOne({ passportId: id });
-//         const email = id + "@blog.com";
-//         if (user) {
-//           done(null, user);
-//         } else {
-//           const newUser = await User.create({
-//             username: profile.username,
-//             isActive: true,
-//             passportId: id,
-//             email: email,
-//           });
-//           done(null, newUser);
-//         }
-//       } catch (error) {
-//         console.log(error.message);
-//         if (error.name === "MongoServerError" && error.code === 11000) {
-//           //"Your email address has been already used. Please try login again."
-//         } else {
-//           //"Error system. Please try login again."
-//         }
-//       }
-//     }
-//   )
-// );
+passport.use(
+  new GitHubStrategy(
+    {
+      clientID: process.env.GITHUB_CLIENT_ID,
+      clientSecret: process.env.GITHUB_CLIENT_SECRET,
+      callbackURL: "/auth/github/callback",
+    },
+    async function (
+      accessToken: any,
+      refreshToken: any,
+      profile: any,
+      done: any
+    ) {
+      try {
+        const id = profile.id + "gh";
+        const user = await User.findOne({ passportId: id });
+        const email = id + "@blog.com";
+        if (user) {
+          done(null, user);
+        } else {
+          const newUser = await User.create({
+            username: profile.username,
+            isActive: true,
+            passportId: id,
+            email: email,
+          });
+          done(null, newUser);
+        }
+      } catch (error) {
+        console.log(error.message);
+        if (error.name === "MongoServerError" && error.code === 11000) {
+          //"Your email address has been already used. Please try login again."
+        } else {
+          //"Error system. Please try login again."
+        }
+      }
+    }
+  )
+);
 
 passport.serializeUser((user: any, done: any) => {
   done(null, user._id);

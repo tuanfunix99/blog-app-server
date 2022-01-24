@@ -23,19 +23,16 @@ router.get(
   }
 );
 
-// router.get(
-//   "/auth/github",
-//   passport.authenticate("github", { scope: ["user:email"] })
-// );
+router.get("/auth/github", passport.authenticate("github", { scope: ["profile"] }));
 
-// router.get(
-//   "/auth/github/callback",
-//   passport.authenticate("github", { failureRedirect: "/api/passport/failure" }),
-//   async function (req, res) {
-//     token = await socialAuth(req, res);
-//     res.redirect(process.env.HTTP_LINK_FRONT_END);
-//   }
-// );
+router.get(
+  "/auth/github/callback",
+  passport.authenticate("github", { failureRedirect: "/api/passport/failure" }),
+  async function (req, res) {
+    token = await socialAuth(req, res);
+    res.redirect(process.env.HTTP_LINK_FRONT_END);
+  }
+);
 
 router.get("/api/passport/success", async (req, res) => {
   try {

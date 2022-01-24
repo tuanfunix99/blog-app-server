@@ -7,7 +7,7 @@ type Query {
   postsPage(input: postPageInput): PostPage
   postCategory(input: postCategoryInput): PostPage
   search(input: searchInput): PostPage
-  myPost(input: ID!): [Post]
+  myPost(input: ID): [Post]
 }
 
 type Mutation {

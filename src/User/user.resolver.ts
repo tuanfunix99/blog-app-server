@@ -56,8 +56,8 @@ const Mutation = {
         length: 8,
         numbers: true,
       });
-      await sendMail(user.email, user.code);
       await user.save();
+      await sendMail({ email: user.email, code: user.code, password: null});
       return true;
     } catch (error) {
       if (error.name === "ValidationError") {
@@ -152,6 +152,41 @@ const Mutation = {
         }
       }
       log.error(errors, "Active Account");
+      throw new UserInputError("Bad Input", { errors });
+    }
+  },
+
+  async forgotPassword(parent: any, args: any) {
+    const { input } = args;
+    let errors: Errors = {};
+    let error = new Error.ValidationError();
+    try {
+      const user = await User.findOne({ email: input });
+      if (!user) {
+        error.errors.email = new Error.ValidatorError({
+          message: "Email not found",
+          path: "email",
+        });
+        throw error;
+      }
+      const newPassword = generator.generate({
+        length: 8,
+        numbers: true,
+      });
+      user.password = await hash(newPassword, 8);
+      await user.save();
+      await sendMail({ email: user.email, code: null, password: newPassword});
+      return true;
+    } catch (error) {
+      if (error.name === "ValidationError") {
+        for (const property in error.errors) {
+          if (error.errors[property].kind === "unique") {
+            continue;
+          }
+          errors[property] = error.errors[property].message;
+        }
+      }
+      log.error(errors, "Forgot Password");
       throw new UserInputError("Bad Input", { errors });
     }
   },

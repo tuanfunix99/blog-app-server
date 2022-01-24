@@ -33,6 +33,7 @@ const Query = {
       const post = await Post.findOne({ _id: input })
         .populate("categories", "name")
         .populate("createdBy", "username profilePic");
+      console.log(post);
       return post;
     } catch (error) {
       log.error(error.message, "Error get post");

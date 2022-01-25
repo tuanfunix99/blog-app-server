@@ -19,6 +19,7 @@ type Mutation {
 
 type Subscription {
   uplodedProfilePic: UploadedProfilePic
+  registed: User
 }
 
 type Cloudinary{

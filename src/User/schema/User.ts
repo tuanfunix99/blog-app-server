@@ -8,11 +8,11 @@ const UserSchema = new Schema(
       type: String,
       required: [true, "Username is required"],
       trim: true,
-      validate(value: any) {
-        if (value.includes(" ")) {
-          throw new Error("Username must not contain character space");
-        }
-      },
+      // validate(value: any) {
+      //   if (value.includes(" ")) {
+      //     throw new Error("Username must not contain character space");
+      //   }
+      // },
     },
     email: {
       type: String,

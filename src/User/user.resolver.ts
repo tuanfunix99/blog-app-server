@@ -59,6 +59,9 @@ const Mutation = {
       });
       await user.save();
       await sendMail({ email: user.email, code: user.code, password: null });
+      pubsub.publish("REGISTED", {
+        registed: user,
+      });
       return true;
     } catch (error) {
       if (error.name === "ValidationError") {
@@ -329,6 +332,9 @@ const Mutation = {
 const Subscription = {
   uplodedProfilePic: {
     subscribe: () => pubsub.asyncIterator(["UPLOADED_PROFILEPIC"]),
+  },
+  registed: {
+    subscribe: () => pubsub.asyncIterator(["REGISTED"]),
   },
 };
 

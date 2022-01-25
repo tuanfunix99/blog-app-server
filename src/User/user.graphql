@@ -71,4 +71,5 @@ type User {
   profilePic: String
   passportId: String
   role: String
+  createdAt: String
 }

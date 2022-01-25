@@ -37,7 +37,7 @@ const Query = {
       const api = new QueryApi(
         User.find(
           {},
-          "username email role profilePic isActive passportId"
+          "username email role profilePic isActive passportId createdAt"
         ).sort({
           createdAt: -1,
         }),

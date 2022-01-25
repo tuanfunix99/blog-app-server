@@ -22,6 +22,9 @@ class QueryApi {
   }
 
   filter() {
+    if(this.options.filter.role === "all"){
+      delete this.options.filter.role;
+    }
     this.query = this.query.find(this.options.filter);
     return this;
   }

@@ -16,6 +16,7 @@ input userUpdateFromRoleInput {
   passportId: String
   role: String!
   isActive: Boolean!
+  createdAt: String
 }
 
 type User {
@@ -26,9 +27,10 @@ type User {
   passportId: String
   role: String!
   isActive: Boolean!
+  createdAt: String
 }
 
-type UsersOutput{
-  users: [User],
+type UsersOutput {
+  users: [User]
   count: Int
 }

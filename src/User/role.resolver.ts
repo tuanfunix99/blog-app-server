@@ -70,7 +70,6 @@ const Query = {
       const count = Math.ceil(contacts.length / options.pagination.perpage);
       api.pagination();
       contacts = await api.query.clone();
-      console.log(count);
       return { contacts, count };
     } catch (error) {
       throw new AuthenticationError("Not Authenticate");

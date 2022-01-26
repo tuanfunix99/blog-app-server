@@ -19,6 +19,10 @@ const ContactSchema = new Schema(
       type: String,
       required: [true, "Content is required"],
     },
+    replied: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,

@@ -2,6 +2,7 @@ scalar OptionScalar
 
 type Query {
   users(options: OptionScalar): UsersOutput
+  contacts(options: OptionScalar): ContactsOutput
 }
 
 type Mutation {
@@ -33,4 +34,18 @@ type User {
 type UsersOutput {
   users: [User]
   count: Int
+}
+
+type ContactsOutput {
+  contacts: [Contact]
+  count: Int
+}
+
+
+type Contact {
+  name: String
+  email: String
+  content: String
+  replied: Boolean
+  createdAt: String
 }

@@ -5,6 +5,7 @@ import { AuthenticationError, UserInputError } from "apollo-server-core";
 import log from "../logger";
 import { GraphQLScalarType } from "graphql";
 import QueryApi from "../utils/QueryApi";
+import Contact from "../User/schema/Contact";
 
 interface Errors {
   [c: string]: any;
@@ -31,8 +32,8 @@ const Query = {
       await auth(req, res);
       authRole(req, res, ["admin", "manager"]);
       const { options } = args;
-      if(res.locals.user.role === "admin"){
-        options.filter = {...options.filter, role: "user"};
+      if (res.locals.user.role === "admin") {
+        options.filter = { ...options.filter, role: "user" };
       }
       const api = new QueryApi(
         User.find(
@@ -42,12 +43,35 @@ const Query = {
           createdAt: -1,
         }),
         options
-      ).search().filter();
+      )
+        .search()
+        .filter();
       let users = await api.query;
       const count = Math.ceil(users.length / options.pagination.perpage);
       api.pagination();
       users = await api.query.clone();
       return { users, count };
+    } catch (error) {
+      throw new AuthenticationError("Not Authenticate");
+    }
+  },
+  async contacts(parent: any, args: any) {
+    const { options } = args;
+    try {
+      const api = new QueryApi(
+        Contact.find().sort({
+          createdAt: -1,
+        }),
+        options
+      )
+        .search()
+        .filter();
+      let contacts = await api.query;
+      const count = Math.ceil(contacts.length / options.pagination.perpage);
+      api.pagination();
+      contacts = await api.query.clone();
+      console.log(count);
+      return { contacts, count };
     } catch (error) {
       throw new AuthenticationError("Not Authenticate");
     }

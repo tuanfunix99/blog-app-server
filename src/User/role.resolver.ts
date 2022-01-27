@@ -123,6 +123,20 @@ const Mutation = {
       throw new UserInputError("Bad Input", { errors });
     }
   },
+
+  async deleteContact(parent: any, args: any, context: any) {
+    try {
+      const { req, res } = context;
+      const { input } = args;
+      await auth(req, res);
+      authRole(req, res, ["admin", "manager"]);
+      await Contact.findByIdAndRemove(input);
+      return input;
+    } catch (error) {
+      log.error({ error: error.message }, "Error delete contact");
+      throw new AuthenticationError("Not Authenticate");
+    }
+  },
 };
 
 export default { Query, Mutation, OptionScalar };

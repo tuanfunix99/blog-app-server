@@ -33,7 +33,6 @@ const Query = {
       const post = await Post.findOne({ _id: input })
         .populate("categories", "name")
         .populate("createdBy", "username profilePic");
-      console.log(post);
       return post;
     } catch (error) {
       log.error(error.message, "Error get post");
@@ -239,7 +238,6 @@ const Mutation = {
     try {
       await auth(req, res);
       for (let postId of input) {
-        console.log(postId);
         const post = await Post.findOne(
           { _id: postId },
           "createdBy content backgroundPic images"

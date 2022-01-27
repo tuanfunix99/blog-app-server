@@ -7,6 +7,7 @@ const UserSchema = new Schema(
     username: {
       type: String,
       required: [true, "Username is required"],
+      unique: true,
       trim: true,
       // validate(value: any) {
       //   if (value.includes(" ")) {

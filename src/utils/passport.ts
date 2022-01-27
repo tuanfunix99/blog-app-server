@@ -22,7 +22,7 @@ passport.use(
         const id = profile.id + "gg";
         const user = await User.findOne({ passportId: id });
         const email = id + "@blog.com";
-        const username = profile.name.givenName + profile.name.familyName;
+        const username = 'user' + profile.id;
         if (user) {
           done(null, user);
         } else {
@@ -63,11 +63,12 @@ passport.use(
         const id = profile.id + "gh";
         const user = await User.findOne({ passportId: id });
         const email = id + "@blog.com";
+        const username = 'user' + profile.id;
         if (user) {
           done(null, user);
         } else {
           const newUser = await User.create({
-            username: profile.username,
+            username: username,
             isActive: true,
             passportId: id,
             email: email,

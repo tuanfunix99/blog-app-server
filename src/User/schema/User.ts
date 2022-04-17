@@ -1,6 +1,8 @@
 import { Schema, model } from "mongoose";
 import { IUser } from "../interfaces/user.interface";
 import validator from "validator";
+import AuthType from "../../constants/authType";
+import Role from "../../constants/role";
 
 const UserSchema = new Schema(
   {
@@ -9,15 +11,10 @@ const UserSchema = new Schema(
       required: [true, "Username is required"],
       unique: true,
       trim: true,
-      // validate(value: any) {
-      //   if (value.includes(" ")) {
-      //     throw new Error("Username must not contain character space");
-      //   }
-      // },
     },
     email: {
       type: String,
-      unique: true,
+      required: [true, "Email is required"],
       trim: true,
       validate(value: any) {
         if (!validator.isEmail(value)) {
@@ -42,11 +39,25 @@ const UserSchema = new Schema(
       type: Boolean,
       default: false,
     },
+    authType: {
+      type: Number,
+      default: AuthType.EMAIL,
+      enum: {
+        values: [AuthType.EMAIL, AuthType.GOOGLE, AuthType.GITHUB],
+        message: "{VALUE} is not supported",
+      },
+    },
     code: { type: String, default: "" },
     token: { type: String },
-    role: { type: String, default: "user" },
+    role: {
+      type: Number,
+      default: Role.USER,
+      enum: {
+        values: [Role.USER, Role.ADMIN, Role.MANAGER],
+        message: "{VALUE} is not supported",
+      },
+    },
     images: [String],
-    passportId: { type: String, default: null },
   },
   {
     timestamps: true,

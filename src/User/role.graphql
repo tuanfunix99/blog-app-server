@@ -6,7 +6,7 @@ type Query {
 }
 
 type Mutation {
-  updateUserFromRole(input: userUpdateFromRoleInput): User
+  # updateUserFromRole(input: userUpdateFromRoleInput): User
   deleteContact(input: ID!): ID
 }
 
@@ -16,7 +16,7 @@ input userUpdateFromRoleInput {
   email: String!
   profilePic: String
   passportId: String
-  role: String!
+  role: Int!
   isActive: Boolean!
   createdAt: String
 }
@@ -26,8 +26,8 @@ type User {
   username: String!
   email: String!
   profilePic: String
-  passportId: String
-  role: String!
+  authType: Int!
+  role: Int!
   isActive: Boolean!
   createdAt: String
 }

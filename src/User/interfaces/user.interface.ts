@@ -9,6 +9,6 @@ export interface IUser {
   code: string;
   token: string;
   images: [string];
-  passportId: string;
-  role: string;
+  authType: number;
+  role: number;
 }

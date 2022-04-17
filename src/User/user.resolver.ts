@@ -4,7 +4,6 @@ import log from "../logger";
 import { hash, compare } from "bcrypt";
 import generator from "generate-password";
 import { sendMail } from "../utils/mail/nodemailer";
-import { Error } from "mongoose";
 import jwt from "jsonwebtoken";
 import { config } from "dotenv";
 import auth from "../middleware/auth";
@@ -14,6 +13,9 @@ import validator from "validator";
 import GraphQLJSON from "graphql-type-json";
 import { uploadToCloudinary, destroyCloudinary } from "../utils/cloudinary";
 import Contact from "./schema/Contact";
+import AuthType from "../constants/authType";
+import { throwValidationError, handleValidationError } from "../utils/error";
+import ErrorValidation, { ErrorMessages } from "../constants/errorValidation";
 
 config();
 
@@ -47,6 +49,16 @@ const Mutation = {
     const { input } = args;
     let errors: Errors = {};
     try {
+      const emailExists = await User.findOne(
+        {
+          email: input.email,
+          authType: AuthType.EMAIL,
+        },
+        "email"
+      );
+      if (emailExists) {
+        errors.email = "Email is already taken.";
+      }
       const user = await User.create({
         username: input.username,
         email: input.email,
@@ -64,17 +76,7 @@ const Mutation = {
       });
       return true;
     } catch (error) {
-      if (error.name === "ValidationError") {
-        for (const property in error.errors) {
-          if (error.errors[property].kind === "unique") {
-            continue;
-          }
-          errors[property] = error.errors[property].message;
-        }
-      } else if (error.name === "MongoServerError" && error.code === 11000) {
-        const property = Object.keys(error.keyPattern)[0];
-        errors[property] = `${property} is already taken`;
-      }
+      errors = handleValidationError(error, errors);
       log.error(errors, "Error Register");
       throw new UserInputError("Bad Input", { errors });
     }
@@ -83,29 +85,22 @@ const Mutation = {
   async activeAccount(parent: any, args: any) {
     const { input } = args;
     let errors: Errors = {};
-    let error = new Error.ValidationError();
     try {
-      const user = await User.findOne({ code: input });
-      if (!user) {
-        error.errors.code = new Error.ValidatorError({
-          message: "Code not exist",
-          path: "code",
-        });
-        throw error;
-      }
+      const user = await User.findOne({ code: input }, "isActive code");
+      const params = [
+        {
+          valid: !user,
+          path: ErrorValidation.CODE,
+          message: ErrorMessages.CodeError.NOT_EXIST,
+        },
+      ];
+      throwValidationError(params);
       user.isActive = true;
-      user.code = "";
+      user.code = null;
       await user.save();
       return true;
     } catch (error) {
-      if (error.name === "ValidationError") {
-        for (const property in error.errors) {
-          if (error.errors[property].kind === "unique") {
-            continue;
-          }
-          errors[property] = error.errors[property].message;
-        }
-      }
+      errors = handleValidationError(error, errors);
       log.error(errors, "Active Account");
       throw new UserInputError("Bad Input", { errors });
     }
@@ -116,46 +111,41 @@ const Mutation = {
       input: { email, password },
     } = args;
     let errors: Errors = {};
-    let error = new Error.ValidationError();
     try {
-      const user = await User.findOne({ email: email });
-      if (!user) {
-        error.errors.email = new Error.ValidatorError({
-          message: "Email not found",
-          path: "email",
-        });
-        throw error;
-      }
-      if (!user.isActive) {
-        error.errors.email = new Error.ValidatorError({
-          message: "Account not active",
-          path: "email",
-        });
-        throw error;
-      }
-      const isMatchPassword = await compare(password, user.password);
-      if (!isMatchPassword) {
-        error.errors.password = new Error.ValidatorError({
-          message: "Password not match",
-          path: "password",
-        });
-        throw error;
-      }
+      const user = await User.findOne(
+        {
+          email: email,
+          authType: AuthType.EMAIL,
+        },
+        "_id token isActive password"
+      );
+      const isMatchPassword = await compare(password, user?.password ?? "");
+      const params = [
+        {
+          valid: !user,
+          path: ErrorValidation.EMAIL,
+          message: ErrorMessages.EmailError.NOT_FOUND,
+        },
+        {
+          valid: !user?.isActive,
+          path: ErrorValidation.EMAIL,
+          message: ErrorMessages.EmailError.NOT_ACTIVE,
+        },
+        {
+          valid: !isMatchPassword,
+          path: ErrorValidation.PASSWORD,
+          message: ErrorMessages.PasswordError.NOT_MATCH,
+        },
+      ];
+      throwValidationError(params);
       user.token = jwt.sign({ _id: user._id }, process.env.PRIVATE_KEY, {
         expiresIn: "24h",
       });
       await user.save();
       return user.token;
     } catch (error) {
-      if (error.name === "ValidationError") {
-        for (const property in error.errors) {
-          if (error.errors[property].kind === "unique") {
-            continue;
-          }
-          errors[property] = error.errors[property].message;
-        }
-      }
-      log.error(errors, "Active Account");
+      errors = handleValidationError(error, errors);
+      log.error({ error: errors }, "Login Account");
       throw new UserInputError("Bad Input", { errors });
     }
   },
@@ -163,16 +153,19 @@ const Mutation = {
   async forgotPassword(parent: any, args: any) {
     const { input } = args;
     let errors: Errors = {};
-    let error = new Error.ValidationError();
     try {
-      const user = await User.findOne({ email: input });
-      if (!user) {
-        error.errors.email = new Error.ValidatorError({
-          message: "Email not found",
-          path: "email",
-        });
-        throw error;
-      }
+      const user = await User.findOne({
+        email: input,
+        authType: AuthType.EMAIL,
+      });
+      const params = [
+        {
+          valid: !user,
+          path: ErrorValidation.EMAIL,
+          message: ErrorMessages.EmailError.NOT_FOUND,
+        },
+      ];
+      throwValidationError(params);
       const newPassword = generator.generate({
         length: 8,
         numbers: true,
@@ -182,14 +175,7 @@ const Mutation = {
       await sendMail({ email: user.email, code: null, password: newPassword });
       return true;
     } catch (error) {
-      if (error.name === "ValidationError") {
-        for (const property in error.errors) {
-          if (error.errors[property].kind === "unique") {
-            continue;
-          }
-          errors[property] = error.errors[property].message;
-        }
-      }
+      errors = handleValidationError(error, errors);
       log.error(errors, "Forgot Password");
       throw new UserInputError("Bad Input", { errors });
     }
@@ -218,6 +204,7 @@ const Mutation = {
         url: "",
         public_id: "",
       };
+
       if (args.input.profilePic !== "/default-profile.png") {
         await destroyCloudinary(args.input.profilePic);
       }
@@ -241,68 +228,88 @@ const Mutation = {
   },
 
   async updateInfo(parent: any, args: any, context: any) {
+    let errors = {};
     try {
       const { req, res } = context;
       await auth(req, res);
       const user = await User.findById(res.locals.user._id);
       const { username, email } = args.input;
-      if (!user.passportId) {
-        if (validator.isEmpty(username) || validator.isEmpty(email)) {
-          throw new Error("Value is required");
-        }
-        if (!validator.isEmail(email)) {
-          throw new Error("Email not valid");
-        }
-      } else {
-        if (validator.isEmpty(username)) {
-          throw new Error("Value is required");
-        }
-      }
+      const emailExists = await User.findOne(
+        {
+          email: email,
+          authType: user.authType,
+        },
+        "email"
+      );
+      const usernameExists = await User.findOne(
+        { username: username },
+        "username"
+      );
+      const params = [
+        {
+          valid: validator.isEmpty(username),
+          path: ErrorValidation.USERNAME,
+          message: ErrorMessages.UsernameError.REQUIRED,
+        },
+        {
+          valid: validator.isEmpty(email),
+          path: ErrorValidation.EMAIL,
+          message: ErrorMessages.EmailError.REQUIRED,
+        },
+        {
+          valid: !validator.isEmail(email),
+          path: ErrorValidation.EMAIL,
+          message: ErrorMessages.EmailError.VALID,
+        },
+        {
+          valid: user.email == email || !emailExists ? false : true,
+          path: ErrorValidation.EMAIL,
+          message: ErrorMessages.EmailError.UNIQUE,
+        },
+        {
+          valid: user.username == username || !usernameExists ? false : true,
+          path: ErrorValidation.USERNAME,
+          message: ErrorMessages.UsernameError.UNIQUE,
+        },
+      ];
+      throwValidationError(params);
       user.username = username;
       user.email = email;
       await user.save();
       return user;
     } catch (error) {
-      log.error(error.message, "Error updating info");
-      throw new AuthenticationError("Not Authenticate");
+      errors = handleValidationError(error, errors);
+      log.error({ error: errors }, "Error updating info");
+      throw new UserInputError("Bad Input", { errors });
     }
   },
 
   async updatePassword(parent: any, args: any, context: any) {
     let errors: Errors = {};
-    let error = new Error.ValidationError();
     try {
       const { req, res } = context;
       await auth(req, res);
       const user = await User.findById(res.locals.user._id);
       const { password, newPassword } = args.input;
       const isMatchPassword = await compare(password, user.password);
-      if (!isMatchPassword) {
-        error.errors.password = new Error.ValidatorError({
-          message: "Password not match",
-          path: "password",
-        });
-        throw error;
-      }
-      if (newPassword.length < 8 || newPassword.length > 64) {
-        error.errors.newPassword = new Error.ValidatorError({
-          message: "Password at least 8 chracters and max 64 characters",
-          path: "newPassword",
-        });
-        throw error;
-      }
+      const params = [
+        {
+          valid: !isMatchPassword,
+          path: ErrorValidation.PASSWORD,
+          message: ErrorMessages.PasswordError.NOT_MATCH,
+        },
+        {
+          valid: newPassword.length < 8 || newPassword.length > 64,
+          path: ErrorValidation.NEW_PASSWORD,
+          message: ErrorMessages.PasswordError.VALID,
+        },
+      ];
+      throwValidationError(params);
       user.password = await hash(newPassword, 8);
       await user.save();
       return true;
     } catch (error) {
-      if (error.name === "ValidationError") {
-        for (const property in error.errors) {
-          if (error.errors[property].kind === "unique") {
-            continue;
-          }
-          errors[property] = error.errors[property].message;
-        }
-      }
+      errors = handleValidationError(error, errors);
       log.error(errors, "Active Account");
       throw new UserInputError("Bad Input", { errors });
     }
@@ -315,14 +322,7 @@ const Mutation = {
       await Contact.create(input);
       return true;
     } catch (error) {
-      if (error.name === "ValidationError") {
-        for (const property in error.errors) {
-          if (error.errors[property].kind === "unique") {
-            continue;
-          }
-          errors[property] = error.errors[property].message;
-        }
-      }
+      errors = handleValidationError(error, errors);
       log.error(errors, "Contact");
       throw new UserInputError("Bad Input", { errors });
     }

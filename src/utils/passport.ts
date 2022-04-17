@@ -1,7 +1,9 @@
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
-const GitHubStrategy = require('passport-github').Strategy;
+const GitHubStrategy = require("passport-github").Strategy;
 const passport = require("passport");
 import User from "../User/schema/User";
+import AuthType from "../constants/authType";
+import log from "../logger";
 
 require("dotenv").config();
 
@@ -19,28 +21,24 @@ passport.use(
       done: any
     ) {
       try {
-        const id = profile.id + "gg";
-        const user = await User.findOne({ passportId: id });
-        const email = id + "@blog.com";
-        const username = 'user' + profile.id;
+        const { emails } = profile;
+        const user = await User.findOne({
+          email: emails[0].value ?? "",
+          authType: AuthType.GOOGLE,
+        });
         if (user) {
           done(null, user);
         } else {
           const newUser = await User.create({
-            username: username.trim(),
+            username: `Google${profile.id}`,
             isActive: true,
-            passportId: id,
-            email: email,
+            email: emails[0].value,
+            authType: AuthType.GOOGLE,
           });
           done(null, newUser);
         }
       } catch (error) {
-        console.log(error.message);
-        if (error.name === "MongoServerError" && error.code === 11000) {
-          //"Your email address has been already used. Please try login again."
-        } else {
-          //"Error system. Please try login again."
-        }
+        log.error({ error: error.message });
       }
     }
   )
@@ -63,7 +61,7 @@ passport.use(
         const id = profile.id + "gh";
         const user = await User.findOne({ passportId: id });
         const email = id + "@blog.com";
-        const username = 'user' + profile.id;
+        const username = "user" + profile.id;
         if (user) {
           done(null, user);
         } else {

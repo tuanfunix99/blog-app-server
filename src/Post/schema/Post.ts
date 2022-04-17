@@ -1,4 +1,5 @@
 import { Schema, model } from "mongoose";
+import { IPost } from '../interfaces/post.interface';
 
 const PostSchema = new Schema(
   {
@@ -31,6 +32,6 @@ const PostSchema = new Schema(
   }
 );
 
-const User = model("Post", PostSchema);
+const User = model<IPost>("Post", PostSchema);
 
 export default User;

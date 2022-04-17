@@ -6,6 +6,7 @@ import log from "../logger";
 import { GraphQLScalarType } from "graphql";
 import QueryApi from "../utils/QueryApi";
 import Contact from "../User/schema/Contact";
+import Role from '../constants/role';
 
 interface Errors {
   [c: string]: any;
@@ -30,15 +31,15 @@ const Query = {
     try {
       const { req, res } = context;
       await auth(req, res);
-      authRole(req, res, ["admin", "manager"]);
+      authRole(req, res, [Role.ADMIN, Role.MANAGER]);
       const { options } = args;
-      if (res.locals.user.role === "admin") {
-        options.filter = { ...options.filter, role: "user" };
+      if (res.locals.user.role === Role.ADMIN) {
+        options.filter = { ...options.filter, role: Role.USER };
       }
       const api = new QueryApi(
         User.find(
           {},
-          "username email role profilePic isActive passportId createdAt"
+          "username email role profilePic isActive authType createdAt"
         ).sort({
           createdAt: -1,
         }),
@@ -78,58 +79,59 @@ const Query = {
 };
 
 const Mutation = {
-  async updateUserFromRole(parent: any, args: any, context: any) {
-    const roles = ["user", "admin", "manager"];
-    let errors: Errors = {};
-    try {
-      const { req, res } = context;
-      const { input } = args;
-      await auth(req, res);
-      authRole(req, res, ["admin", "manager"]);
-      const user = await User.findById(input._id);
-      if (!user) {
-        throw new Error("User not found");
-      }
-      user.username = input.username;
-      user.isActive = input.isActive;
-      if (res.locals.user.role === "manager") {
-        if (roles.includes(input.role)) {
-          user.role = input.role;
-        }
-      }
-      if (!user.passportId) {
-        user.email = input.email;
-      }
-      await User.findByIdAndUpdate(user._id, user, {
-        new: true,
-        runValidators: true,
-      });
-      return user;
-    } catch (error) {
-      if (error.name === "ValidationError") {
-        for (const property in error.errors) {
-          if (error.errors[property].kind === "unique") {
-            continue;
-          }
-          errors[property] = error.errors[property].message;
-        }
-      } else if (error.name === "MongoServerError" && error.code === 11000) {
-        const property = Object.keys(error.keyPattern)[0];
-        errors[property] = `${property} is already taken`;
-      } else {
-        errors.system = "Error System";
-      }
-      log.error(errors, "Error Register");
-      throw new UserInputError("Bad Input", { errors });
-    }
-  },
+
+  // async updateUserFromRole(parent: any, args: any, context: any) {
+  //   const roles = [Role.USER, Role.ADMIN, Role.MANAGER];
+  //   let errors: Errors = {};
+  //   try {
+  //     const { req, res } = context;
+  //     const { input } = args;
+  //     await auth(req, res);
+  //     authRole(req, res, [, "manager"]);
+  //     const user = await User.findById(input._id);
+  //     if (!user) {
+  //       throw new Error("User not found");
+  //     }
+  //     user.username = input.username;
+  //     user.isActive = input.isActive;
+  //     if (res.locals.user.role === "manager") {
+  //       if (roles.includes(input.role)) {
+  //         user.role = input.role;
+  //       }
+  //     }
+  //     if (!user.passportId) {
+  //       user.email = input.email;
+  //     }
+  //     await User.findByIdAndUpdate(user._id, user, {
+  //       new: true,
+  //       runValidators: true,
+  //     });
+  //     return user;
+  //   } catch (error) {
+  //     if (error.name === "ValidationError") {
+  //       for (const property in error.errors) {
+  //         if (error.errors[property].kind === "unique") {
+  //           continue;
+  //         }
+  //         errors[property] = error.errors[property].message;
+  //       }
+  //     } else if (error.name === "MongoServerError" && error.code === 11000) {
+  //       const property = Object.keys(error.keyPattern)[0];
+  //       errors[property] = `${property} is already taken`;
+  //     } else {
+  //       errors.system = "Error System";
+  //     }
+  //     log.error(errors, "Error Register");
+  //     throw new UserInputError("Bad Input", { errors });
+  //   }
+  // },
 
   async deleteContact(parent: any, args: any, context: any) {
     try {
       const { req, res } = context;
       const { input } = args;
       await auth(req, res);
-      authRole(req, res, ["admin", "manager"]);
+      authRole(req, res, [Role.ADMIN, Role.MANAGER]);
       await Contact.findByIdAndRemove(input);
       return input;
     } catch (error) {
